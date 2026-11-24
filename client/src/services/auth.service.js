@@ -7,7 +7,7 @@ import apiClient from './api.js';
 export const authService = {
   /**
    * Login user with credentials
-   * @param {{ email: string, password: string, rememberMe?: boolean }} credentials
+   *@param {{ idNumber: string, password: string, rememberMe?: boolean }} credentials
    */
   async login(credentials) {
     return apiClient.post('/auth/login', credentials);

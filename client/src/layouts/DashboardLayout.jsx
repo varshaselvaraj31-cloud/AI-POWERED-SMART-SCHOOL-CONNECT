@@ -5,6 +5,9 @@ import StudentSidebar, {
   SIDEBAR_COLLAPSED_WIDTH,
 } from '../components/navigation/StudentSidebar.jsx';
 import DashboardTopBar from '../components/navigation/DashboardTopBar.jsx';
+import AIChatbox from '../components/ai/AIChatbox.jsx';
+import { getEffectiveStudent } from '../utils/authStorage.js';
+import { DEMO_STUDENT } from '../data/studentDemo.js';
 
 /**
  * DashboardLayout – Shell layout with Luxury Gold & Black styling.
@@ -13,6 +16,7 @@ const DashboardLayout = ({ children, title = 'Dashboard' }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
 
+  const student = getEffectiveStudent(DEMO_STUDENT);
   const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
 
   return (
@@ -30,6 +34,7 @@ const DashboardLayout = ({ children, title = 'Dashboard' }) => {
         onMobileMenuToggle={() => setMobileOpen(true)}
         sidebarWidth={sidebarWidth}
         title={title}
+        userName={student.name}
       />
 
       {/* Main Content Area */}
@@ -47,6 +52,9 @@ const DashboardLayout = ({ children, title = 'Dashboard' }) => {
       >
         {children}
       </Box>
+
+      {/* Floating Smart School AI Assistant */}
+      <AIChatbox />
     </Box>
   );
 };

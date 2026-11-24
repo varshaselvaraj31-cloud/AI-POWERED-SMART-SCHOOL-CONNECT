@@ -8,6 +8,16 @@ import { ApiError } from '../utils/apiError.js';
 export const errorHandler = (err, req, res, next) => {
   let error = err;
 
+  // Handle MongoDB duplicate key error (code 11000)
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyValue || {})[0] || 'field';
+    const value = err.keyValue ? err.keyValue[field] : '';
+    error = new ApiError(
+      409,
+      `An account with this ${field === 'email' ? 'email address' : field} ("${value}") already exists. Please use a different ${field} or sign in.`
+    );
+  }
+
   // If error is not an instance of custom ApiError, standardize it
   if (!(error instanceof ApiError)) {
     const statusCode = error.statusCode || (error.name === 'ValidationError' ? 400 : 500);

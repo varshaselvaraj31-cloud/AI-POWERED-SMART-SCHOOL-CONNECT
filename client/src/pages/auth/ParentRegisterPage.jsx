@@ -133,7 +133,13 @@ export const ParentRegisterPage = () => {
 
       setServerSuccess('Parent account registered successfully! Redirecting to login...');
       setTimeout(() => {
-        navigate('/login');
+        navigate('/login', {
+          state: {
+            role: 'parent',
+            identifier: formData.email || formData.phone,
+            message: `Parent registration successful! Please sign in with your Email: ${formData.email}.`,
+          },
+        });
       }, 1500);
     } catch (err) {
       setServerError(

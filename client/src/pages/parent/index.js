@@ -1,0 +1,9 @@
+export { default as ParentDashboardPage } from './ParentDashboardPage.jsx';
+export { default as ParentAttendancePage } from './ParentAttendancePage.jsx';
+export { default as ParentAcademicsPage } from './ParentAcademicsPage.jsx';
+export { default as ParentAssignmentsPage } from './ParentAssignmentsPage.jsx';
+export { default as ParentTimetablePage } from './ParentTimetablePage.jsx';
+export { default as ParentTeachersPage } from './ParentTeachersPage.jsx';
+export { default as ParentAnnouncementsPage } from './ParentAnnouncementsPage.jsx';
+export { default as ParentProfilePage } from './ParentProfilePage.jsx';
+export { default as ParentTodoPage } from './ParentTodoPage.jsx';

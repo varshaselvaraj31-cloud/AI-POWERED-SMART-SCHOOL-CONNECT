@@ -17,12 +17,20 @@ import { DEMO_STUDENT } from '../../data/studentDemo.js';
 /**
  * DashboardTopBar – Top navigation bar with Gold & Black theme.
  */
-const DashboardTopBar = ({ onMobileMenuToggle, sidebarWidth = 240, title = 'Dashboard' }) => {
-  const initials = DEMO_STUDENT.name
+const DashboardTopBar = ({
+  onMobileMenuToggle,
+  sidebarWidth = 240,
+  title = 'Dashboard',
+  userName = null,
+  portalSubtitle = 'AI-POWERED SMART SCHOOL CONNECT',
+}) => {
+  const displayName = userName || DEMO_STUDENT.name;
+  const initials = displayName
     .split(' ')
+    .filter((n) => !n.includes('.'))
     .map((n) => n[0])
     .join('')
-    .toUpperCase();
+    .toUpperCase() || 'U';
 
   return (
     <AppBar
@@ -57,7 +65,7 @@ const DashboardTopBar = ({ onMobileMenuToggle, sidebarWidth = 240, title = 'Dash
             {title}
           </Typography>
           <Typography variant="caption" sx={{ color: '#d97706', display: { xs: 'none', sm: 'block' }, fontWeight: 600 }}>
-            AI-POWERED SMART SCHOOL CONNECT
+            {portalSubtitle}
           </Typography>
         </Box>
 
@@ -86,7 +94,7 @@ const DashboardTopBar = ({ onMobileMenuToggle, sidebarWidth = 240, title = 'Dash
         </Tooltip>
 
         {/* User Avatar */}
-        <Tooltip title={DEMO_STUDENT.name}>
+        <Tooltip title={displayName}>
           <Avatar
             sx={{
               width: 36,

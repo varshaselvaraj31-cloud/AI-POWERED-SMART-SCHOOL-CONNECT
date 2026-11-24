@@ -1,22 +1,9 @@
-import jwt from 'jsonwebtoken';
-import mongoose from 'mongoose';
-import env from '../config/env.js';
-import { User, Student, Teacher, Parent } from '../models/index.js';
-import { ApiError } from '../utils/apiError.js';
+import jwt from "jsonwebtoken";
+import env from "../config/env.js";
+import { User, Student, Teacher, Parent } from "../models/index.js";
+import { ApiError } from "../utils/apiError.js";
 
-/**
- * Auth Service – Contains all business logic for authentication.
- *
- * This layer is intentionally separate from the controller (HTTP layer)
- * and the model (database layer), following the Clean Architecture pattern.
- *
- * Rules enforced here:
- * - Passwords are NEVER returned or logged.
- * - JWT tokens are signed with JWT_SECRET from environment.
- * - Each role gets its own profile document in addition to the base User.
- */
-
-// ─── Helper: Generate a signed JWT token ─────────────────────────────────────
+// Helper: Generate JWT Token
 const generateToken = (userId, role) => {
   return jwt.sign(
     { id: userId, role },
@@ -25,10 +12,11 @@ const generateToken = (userId, role) => {
   );
 };
 
-// ─── Helper: Format safe user payload (no password, no internal fields) ──────
+// Helper: Safe User Payload
 const formatUserPayload = (user, profile = null) => ({
   id: user._id,
   name: user.name,
+  idNumber: user.idNumber,
   email: user.email,
   role: user.role,
   phone: user.phone,
@@ -38,49 +26,53 @@ const formatUserPayload = (user, profile = null) => ({
   ...(profile && { profile }),
 });
 
-// ─── Validate required fields ─────────────────────────────────────────────────
+// Helper: Check Required Fields
 const requireFields = (fields, body) => {
-  const missing = fields.filter((f) => !body[f] || String(body[f]).trim() === '');
+  const missing = fields.filter((f) => !body[f] || String(body[f]).trim() === "");
   if (missing.length > 0) {
-    throw new ApiError(400, `Missing required fields: ${missing.join(', ')}`);
+    throw new ApiError(400, `Missing required fields: ${missing.join(", ")}`);
   }
 };
 
-// ─── 1. Register Student ──────────────────────────────────────────────────────
+// 1. Register Student
 export const registerStudent = async (data) => {
-  const { name, email, password, admissionNumber, grade, parentPhone, phone } = data;
+  const { name, idNumber, password, admissionNumber, grade, parentPhone, phone, email } = data;
 
-  requireFields(['name', 'email', 'password', 'admissionNumber', 'grade', 'parentPhone'], data);
+  requireFields(["name", "idNumber", "password", "admissionNumber", "grade", "parentPhone", "phone"], data);
 
   if (password.length < 6) {
-    throw new ApiError(400, 'Password must be at least 6 characters long.');
+    throw new ApiError(400, "Password must be at least 6 characters long.");
   }
 
-  // Check for duplicate email
-  const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
+  const existingUser = await User.findOne({ idNumber: idNumber.trim().toUpperCase() });
   if (existingUser) {
-    throw new ApiError(409, 'An account with this email address already exists. Please log in.');
+    throw new ApiError(409, "An account with this ID Number already exists. Please log in.");
   }
 
-  // Check for duplicate admission number
+  if (email && email.trim()) {
+    const existingEmail = await User.findOne({ email: email.toLowerCase().trim() });
+    if (existingEmail) {
+      throw new ApiError(409, `An account with email "${email.trim()}" already exists. Please use a different email or log in.`);
+    }
+  }
+
   const existingAdmission = await Student.findOne({
     admissionNumber: admissionNumber.trim().toUpperCase(),
   });
   if (existingAdmission) {
-    throw new ApiError(409, 'A student profile with this Admission Number already exists.');
+    throw new ApiError(409, "A student profile with this Admission Number already exists.");
   }
 
-  // Create the base User account first
   const user = await User.create({
     name: name.trim(),
-    email: email.toLowerCase().trim(),
-    password, // Will be hashed by pre-save hook in user.model.js
-    role: 'student',
-    phone: phone || '',
-    profileModel: 'Student',
+    idNumber: idNumber.trim().toUpperCase(),
+    email: email ? email.toLowerCase().trim() : undefined,
+    password,
+    role: "student",
+    phone: phone.trim(),
+    profileModel: "Student",
   });
 
-  // Create the Student profile document linked to the User
   const studentProfile = await Student.create({
     user: user._id,
     admissionNumber: admissionNumber.trim().toUpperCase(),
@@ -88,43 +80,51 @@ export const registerStudent = async (data) => {
     parentPhone: parentPhone.trim(),
   });
 
-  // Link the profile reference back into the User document
   user.profileRef = studentProfile._id;
-  await user.save({ validateBeforeSave: false });
+  await User.findByIdAndUpdate(user._id, { profileRef: studentProfile._id });
 
   const token = generateToken(user._id, user.role);
   return { token, user: formatUserPayload(user, studentProfile) };
 };
 
-// ─── 2. Register Teacher ──────────────────────────────────────────────────────
+// 2. Register Teacher
 export const registerTeacher = async (data) => {
-  const { name, email, password, employeeId, department, phone } = data;
+  const { name, password, employeeId, department, phone, email } = data;
+  const idNumber = (data.idNumber || employeeId || '').trim().toUpperCase();
 
-  requireFields(['name', 'email', 'password', 'employeeId', 'department', 'phone'], data);
+  requireFields(["name", "password", "employeeId", "department", "phone"], data);
 
   if (password.length < 6) {
-    throw new ApiError(400, 'Password must be at least 6 characters long.');
+    throw new ApiError(400, "Password must be at least 6 characters long.");
   }
 
-  const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
+  const existingUser = await User.findOne({ idNumber });
   if (existingUser) {
-    throw new ApiError(409, 'An account with this email address already exists. Please log in.');
+    throw new ApiError(409, "An account with this Employee / ID Number already exists. Please log in.");
+  }
+
+  if (email && email.trim()) {
+    const existingEmail = await User.findOne({ email: email.toLowerCase().trim() });
+    if (existingEmail) {
+      throw new ApiError(409, `An account with email "${email.trim()}" already exists. Please use a different email or log in.`);
+    }
   }
 
   const existingEmployee = await Teacher.findOne({
     employeeId: employeeId.trim().toUpperCase(),
   });
   if (existingEmployee) {
-    throw new ApiError(409, 'A teacher profile with this Employee ID already exists.');
+    throw new ApiError(409, "A teacher profile with this Employee ID already exists.");
   }
 
   const user = await User.create({
     name: name.trim(),
-    email: email.toLowerCase().trim(),
+    idNumber,
+    email: email ? email.toLowerCase().trim() : undefined,
     password,
-    role: 'teacher',
+    role: "teacher",
     phone: phone.trim(),
-    profileModel: 'Teacher',
+    profileModel: "Teacher",
   });
 
   const teacherProfile = await Teacher.create({
@@ -134,135 +134,174 @@ export const registerTeacher = async (data) => {
   });
 
   user.profileRef = teacherProfile._id;
-  await user.save({ validateBeforeSave: false });
+  await User.findByIdAndUpdate(user._id, { profileRef: teacherProfile._id });
 
   const token = generateToken(user._id, user.role);
   return { token, user: formatUserPayload(user, teacherProfile) };
 };
 
-// ─── 3. Register Parent ───────────────────────────────────────────────────────
+// 3. Register Parent
 export const registerParent = async (data) => {
-  const { name, email, password, studentAdmissionNumber, relationship, phone } = data;
+  const { name, password, studentAdmissionNumber, relationship, phone, email } = data;
+  const idNumber = (data.idNumber || phone || email || `PAR-${studentAdmissionNumber}`).trim().toUpperCase();
 
-  requireFields(['name', 'email', 'password', 'studentAdmissionNumber', 'relationship', 'phone'], data);
+  requireFields(["name", "password", "studentAdmissionNumber", "relationship", "phone"], data);
 
   if (password.length < 6) {
-    throw new ApiError(400, 'Password must be at least 6 characters long.');
+    throw new ApiError(400, "Password must be at least 6 characters long.");
   }
 
-  const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
+  const existingUser = await User.findOne({ idNumber });
   if (existingUser) {
-    throw new ApiError(409, 'An account with this email address already exists. Please log in.');
+    throw new ApiError(409, "An account with this phone or ID already exists. Please log in.");
   }
 
-  // Verify the student admission number exists in the database
-  const linkedStudent = await Student.findOne({
-    admissionNumber: studentAdmissionNumber.trim().toUpperCase(),
-  });
-  if (!linkedStudent) {
-    throw new ApiError(
-      404,
-      `No student found with admission number "${studentAdmissionNumber}". Please verify and try again.`
-    );
+  if (email && email.trim()) {
+    const existingEmail = await User.findOne({ email: email.toLowerCase().trim() });
+    if (existingEmail) {
+      throw new ApiError(409, `An account with email "${email.trim()}" already exists. Please use a different email or log in.`);
+    }
   }
+
+  // 3. Register Parent
+  // Note: If linkedStudent exists in DB, link it; otherwise allow registration with the provided admission number/name
+  let linkedStudent = await Student.findOne({
+    admissionNumber: studentAdmissionNumber.trim().toUpperCase(),
+  }).populate('user', 'name');
 
   const user = await User.create({
     name: name.trim(),
-    email: email.toLowerCase().trim(),
+    idNumber,
+    email: email ? email.toLowerCase().trim() : undefined,
     password,
-    role: 'parent',
+    role: "parent",
     phone: phone.trim(),
-    profileModel: 'Parent',
+    profileModel: "Parent",
   });
 
   const parentProfile = await Parent.create({
     user: user._id,
     studentAdmissionNumber: studentAdmissionNumber.trim().toUpperCase(),
     relationship: relationship.trim(),
-    linkedStudent: linkedStudent._id,
+    linkedStudent: linkedStudent ? linkedStudent._id : null,
   });
 
   user.profileRef = parentProfile._id;
-  await user.save({ validateBeforeSave: false });
+  await User.findByIdAndUpdate(user._id, { profileRef: parentProfile._id });
 
   const token = generateToken(user._id, user.role);
-  return { token, user: formatUserPayload(user, parentProfile) };
+
+  const profilePayload = {
+    ...parentProfile.toObject(),
+    studentAdmissionNumber: studentAdmissionNumber.trim().toUpperCase(),
+    studentName: linkedStudent?.user?.name || studentAdmissionNumber.trim().toUpperCase(),
+  };
+
+  return { token, user: formatUserPayload(user, profilePayload) };
 };
 
-// ─── 4. Login (all roles use the same endpoint) ───────────────────────────────
+// 4. Login - ID Number / Admission Number / Email Login
 export const loginUser = async (data) => {
-  const { email, password } = data;
+  const identifier = (data.idNumber || data.identifier || data.email || "").trim();
+  const { password } = data;
 
-  if (!email || !password) {
-    throw new ApiError(400, 'Both email and password are required to log in.');
+  if (!identifier || !password) {
+    throw new ApiError(400, "Both ID Number and password are required to log in.");
   }
 
-  // Explicitly select password since it's excluded by default (select: false)
-  const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
+  const upperId = identifier.toUpperCase();
+  const lowerId = identifier.toLowerCase();
+
+  // 1. Check User by ID Number, Email, or Phone
+  let user = await User.findOne({
+    $or: [
+      { idNumber: upperId },
+      { email: lowerId },
+      { phone: identifier },
+    ],
+  }).select("+password");
+
+  // 2. If not found, check if a student used their Admission / Roll No
+  if (!user) {
+    const student = await Student.findOne({ admissionNumber: upperId });
+    if (student && student.user) {
+      user = await User.findById(student.user).select("+password");
+    }
+  }
+
+  // 3. If not found, check if a teacher used their Employee ID
+  if (!user) {
+    const teacher = await Teacher.findOne({ employeeId: upperId });
+    if (teacher && teacher.user) {
+      user = await User.findById(teacher.user).select("+password");
+    }
+  }
 
   if (!user) {
-    // Vague message on purpose: do not reveal whether email exists
-    throw new ApiError(401, 'Invalid credentials. Please check your email and password.');
+    throw new ApiError(401, "Invalid credentials. Please check your ID Number and password.");
   }
 
   if (!user.isActive) {
-    throw new ApiError(
-      403,
-      'This account has been deactivated. Please contact school administration.'
-    );
+    throw new ApiError(403, "This account has been deactivated. Please contact school administration.");
   }
 
-  // Compare entered password with hashed password using the model method
   const isPasswordCorrect = await user.comparePassword(password);
   if (!isPasswordCorrect) {
-    throw new ApiError(401, 'Invalid credentials. Please check your email and password.');
+    throw new ApiError(401, "Invalid credentials. Please check your ID Number and password.");
   }
 
-  // Update last login timestamp
-  user.lastLoginAt = new Date();
-  await user.save({ validateBeforeSave: false });
+  // Update lastLoginAt without re-saving whole doc
+  await User.findByIdAndUpdate(user._id, { lastLoginAt: new Date() });
+
+  // Populate profile details
+  let profile = null;
+  if (user.role === 'student') {
+    profile = await Student.findOne({ user: user._id });
+  } else if (user.role === 'teacher') {
+    profile = await Teacher.findOne({ user: user._id });
+  } else if (user.role === 'parent') {
+    const parentDoc = await Parent.findOne({ user: user._id }).populate({
+      path: 'linkedStudent',
+      populate: { path: 'user', select: 'name' }
+    });
+    if (parentDoc) {
+      profile = {
+        ...parentDoc.toObject(),
+        studentName: parentDoc.linkedStudent?.user?.name || parentDoc.studentAdmissionNumber,
+        studentAdmissionNumber: parentDoc.studentAdmissionNumber,
+      };
+    }
+  }
 
   const token = generateToken(user._id, user.role);
-  return { token, user: formatUserPayload(user) };
+  return { token, user: formatUserPayload(user, profile) };
 };
 
-// ─── 5. Get Current User Profile (requires protect middleware) ────────────────
+// 5. Get Current User
 export const getMe = async (userId) => {
-  const user = await User.findById(userId).populate('profileRef');
+  const user = await User.findById(userId).populate("profileRef");
   if (!user) {
-    throw new ApiError(404, 'User profile not found.');
+    throw new ApiError(404, "User profile not found.");
   }
   return formatUserPayload(user, user.profileRef);
 };
 
-// ─── 6. Forgot Password (API structure – email delivery not yet wired) ────────
-export const forgotPassword = async (email) => {
-  if (!email || !email.trim()) {
-    throw new ApiError(400, 'Email address is required to initiate password reset.');
+// 6. Forgot Password
+export const forgotPassword = async (idNumber) => {
+  if (!idNumber || !idNumber.trim()) {
+    throw new ApiError(400, "ID Number is required to initiate password reset.");
   }
 
-  const user = await User.findOne({ email: email.toLowerCase().trim() });
+  const user = await User.findOne({ idNumber: idNumber.trim().toUpperCase() });
 
-  // Always return success to prevent email enumeration attacks
   if (!user) {
     return {
-      message:
-        'If an account with this email exists, password reset instructions have been sent.',
+      message: "If an account with this ID exists, password reset instructions have been sent.",
     };
   }
 
-  // TODO: When email service is configured, generate a hashed reset token here
-  // and send the reset link via nodemailer or a transactional email provider.
-  // Example flow (not yet implemented):
-  //   const resetToken = crypto.randomBytes(32).toString('hex');
-  //   user.passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-  //   user.passwordResetExpires = Date.now() + 15 * 60 * 1000; // 15 minutes
-  //   await user.save({ validateBeforeSave: false });
-  //   await sendResetEmail(user.email, resetToken);
-
   return {
-    message:
-      'If an account with this email exists, password reset instructions have been sent.',
+    message: "If an account with this ID exists, password reset instructions have been sent.",
   };
 };
 

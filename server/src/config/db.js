@@ -1,5 +1,13 @@
 import mongoose from 'mongoose';
+import dns from 'dns';
 import env from './env.js';
+
+// Resolve IPv4 addresses first to avoid Windows Node.js getaddrinfo ENOTFOUND on SRV clusters
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch (err) {
+  // Ignore on Node versions that do not support it
+}
 
 /**
  * Connect to real MongoDB instance using Mongoose.
@@ -8,7 +16,8 @@ import env from './env.js';
 export const connectDB = async () => {
   try {
     const conn = await mongoose.connect(env.MONGO_URI, {
-      serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of hanging indefinitely
+      serverSelectionTimeoutMS: 10000,
+      family: 4, // Explicitly enforce IPv4 resolution
     });
 
     console.log(`[Database] MongoDB Connected successfully: ${conn.connection.host}`);

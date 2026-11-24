@@ -19,6 +19,7 @@ import {
   DEMO_STUDENT,
   DEMO_STATS,
 } from '../../data/studentDemo.js';
+import { getEffectiveStudent, getUserInitials } from '../../utils/authStorage.js';
 
 /**
  * StudentDashboardPage – Main overview dashboard for a logged-in student.
@@ -26,11 +27,8 @@ import {
  * All content uses demo/sample data as clearly labeled.
  */
 const StudentDashboardPage = () => {
-  const initials = DEMO_STUDENT.name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase();
+  const student = getEffectiveStudent(DEMO_STUDENT);
+  const initials = getUserInitials(student.name);
 
   const greeting = () => {
     const hour = new Date().getHours();
@@ -104,13 +102,13 @@ const StudentDashboardPage = () => {
                     WebkitTextFillColor: 'transparent',
                   }}
                 >
-                  {DEMO_STUDENT.name.split(' ')[0]}
+                  {student.name.split(' ')[0]}
                 </Box>
                 !
               </Typography>
             </Box>
             <Typography variant="body2" sx={{ color: '#d97706', fontWeight: 600 }}>
-              {DEMO_STUDENT.grade} · Section {DEMO_STUDENT.section} · Roll No. {DEMO_STUDENT.rollNumber}
+              {student.grade} · ID {student.id}
             </Typography>
             <Typography variant="caption" sx={{ color: '#94a3b8', mt: 0.5, display: 'block' }}>
               Admission ID: {DEMO_STUDENT.admissionNumber}

@@ -11,6 +11,7 @@ import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined
 import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined';
 import DashboardLayout from '../../layouts/DashboardLayout.jsx';
 import { DEMO_STUDENT, DEMO_STATS } from '../../data/studentDemo.js';
+import { getEffectiveStudent, getUserInitials } from '../../utils/authStorage.js';
 
 const InfoRow = ({ icon, label, value }) => (
   <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5, py: 1.25 }}>
@@ -27,7 +28,8 @@ const InfoRow = ({ icon, label, value }) => (
 );
 
 const StudentProfilePage = () => {
-  const initials = DEMO_STUDENT.name.split(' ').map(n => n[0]).join('').toUpperCase();
+  const student = getEffectiveStudent(DEMO_STUDENT);
+  const initials = getUserInitials(student.name);
 
   return (
     <DashboardLayout title="My Profile">
@@ -39,7 +41,18 @@ const StudentProfilePage = () => {
             <Typography variant="h5" sx={{ fontWeight: 800, color: '#f8fafc' }}>My Profile</Typography>
             <Typography variant="caption" sx={{ color: '#94a3b8' }}>Personal and academic information</Typography>
           </Box>
-          <Chip label="DEMO DATA" size="small" sx={{ ml: 'auto', bgcolor: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.3)', fontWeight: 800, fontSize: '0.65rem' }} />
+          <Chip
+            label={student.isRealUser ? 'ACTIVE ACCOUNT' : 'DEMO DATA'}
+            size="small"
+            sx={{
+              ml: 'auto',
+              bgcolor: student.isRealUser ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+              color: student.isRealUser ? '#10b981' : '#fbbf24',
+              border: student.isRealUser ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(245, 158, 11, 0.3)',
+              fontWeight: 800,
+              fontSize: '0.65rem',
+            }}
+          />
         </Box>
 
         <Grid container spacing={3}>
@@ -49,10 +62,10 @@ const StudentProfilePage = () => {
               <Avatar sx={{ width: 90, height: 90, background: 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)', color: '#000000', fontSize: '2rem', fontWeight: 800, mx: 'auto', mb: 2, border: '2px solid #fbbf24' }}>
                 {initials}
               </Avatar>
-              <Typography variant="h6" sx={{ fontWeight: 800, color: '#f8fafc' }}>{DEMO_STUDENT.name}</Typography>
-              <Typography variant="caption" sx={{ color: '#d97706', fontWeight: 600 }}>{DEMO_STUDENT.grade}</Typography>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: '#f8fafc' }}>{student.name}</Typography>
+              <Typography variant="caption" sx={{ color: '#d97706', fontWeight: 600 }}>{student.grade}</Typography>
               <Box sx={{ mt: 2 }}>
-                <Chip label="Student" size="small" sx={{ bgcolor: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.3)', fontWeight: 800 }} />
+                <Chip label={`ID: ${student.id}`} size="small" sx={{ bgcolor: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.3)', fontWeight: 800 }} />
               </Box>
               {/* Quick Stats */}
               <Grid container spacing={1} sx={{ mt: 2 }}>
@@ -77,15 +90,15 @@ const StudentProfilePage = () => {
             <Paper sx={{ borderRadius: 3.5, border: '1px solid rgba(245, 158, 11, 0.2)', p: 3, bgcolor: '#121722', boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)' }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#f8fafc', mb: 1 }}>Personal Information</Typography>
               <Divider sx={{ mb: 1.5, borderColor: 'rgba(245, 158, 11, 0.15)' }} />
-              <InfoRow icon={<BadgeOutlinedIcon fontSize="small" />} label="Admission Number" value={DEMO_STUDENT.admissionNumber} />
-              <InfoRow icon={<EmailOutlinedIcon fontSize="small" />} label="Email Address" value={DEMO_STUDENT.email} />
-              <InfoRow icon={<PhoneOutlinedIcon fontSize="small" />} label="Parent Phone" value={DEMO_STUDENT.phone} />
-              <InfoRow icon={<PeopleOutlinedIcon fontSize="small" />} label="Parent / Guardian" value={DEMO_STUDENT.parentName} />
+              <InfoRow icon={<BadgeOutlinedIcon fontSize="small" />} label="Admission Number" value={student.admissionNumber} />
+              <InfoRow icon={<EmailOutlinedIcon fontSize="small" />} label="Email Address" value={student.email} />
+              <InfoRow icon={<PhoneOutlinedIcon fontSize="small" />} label="Phone Number" value={student.phone} />
+              <InfoRow icon={<PeopleOutlinedIcon fontSize="small" />} label="Parent Contact Phone" value={student.parentPhone || student.phone} />
 
               <Divider sx={{ my: 2, borderColor: 'rgba(245, 158, 11, 0.15)' }} />
               <Typography variant="subtitle1" sx={{ fontWeight: 800, color: '#f8fafc', mb: 1 }}>Academic Information</Typography>
-              <InfoRow icon={<SchoolOutlinedIcon fontSize="small" />} label="Grade & Section" value={`${DEMO_STUDENT.grade} · Section ${DEMO_STUDENT.section}`} />
-              <InfoRow icon={<BadgeOutlinedIcon fontSize="small" />} label="Roll Number" value={DEMO_STUDENT.rollNumber} />
+              <InfoRow icon={<SchoolOutlinedIcon fontSize="small" />} label="Grade & Section" value={student.grade} />
+              <InfoRow icon={<BadgeOutlinedIcon fontSize="small" />} label="Student ID Number" value={student.id} />
               <InfoRow icon={<CalendarTodayOutlinedIcon fontSize="small" />} label="Joined School" value={DEMO_STUDENT.joinedDate} />
             </Paper>
           </Grid>

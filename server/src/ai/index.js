@@ -13,6 +13,21 @@ class AIService {
     this.adapter = adapter;
   }
 
+  async chat(message, history = [], options = {}) {
+    const role = options.role || 'student';
+    const userName = options.userName || 'User';
+
+    // Format prompt incorporating user context if provided
+    let contextPrompt = `User Name: ${userName}\nRole: ${role}\nMessage: ${message}`;
+    if (history && history.length > 0) {
+      const recentHistory = history.slice(-4).map((h) => `${h.sender}: ${h.text}`).join('\n');
+      contextPrompt = `Previous Conversation:\n${recentHistory}\n\n${contextPrompt}`;
+    }
+
+    const response = await this.adapter.generateText(contextPrompt, { role, ...options });
+    return response;
+  }
+
   async analyzeStudentPerformance(studentName, gradesData, attendanceRate) {
     const prompt = SCHOOL_PROMPTS.STUDENT_PERFORMANCE_ANALYSIS(studentName, gradesData, attendanceRate);
     return this.adapter.generateText(prompt);

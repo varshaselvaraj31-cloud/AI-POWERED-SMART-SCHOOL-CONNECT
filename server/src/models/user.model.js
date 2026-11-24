@@ -1,74 +1,73 @@
-import mongoose from 'mongoose';
-import bcrypt from 'bcryptjs';
+import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 
-/**
- * User Model – Central identity record for all school stakeholders.
- *
- * Every person who can log in (student, teacher, parent, admin) has ONE User document.
- * Role-specific details (grade, department, etc.) live in separate profile models
- * (Student, Teacher, Parent) which reference back to this User via profileRef.
- *
- * Passwords are ALWAYS hashed with bcryptjs before saving – never stored in plain text.
- * The password field is hidden from query results by default (select: false).
- */
 const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, 'Full name is required'],
+      required: [true, "Full name is required"],
       trim: true,
-      minlength: [2, 'Name must be at least 2 characters'],
-      maxlength: [100, 'Name cannot exceed 100 characters'],
+      minlength: [2, "Name must be at least 2 characters"],
+      maxlength: [100, "Name cannot exceed 100 characters"],
     },
+    // 1. School ID Number - Login Key
+    idNumber: {
+      type: String,
+      required: [true, "School ID Number is required"],
+      unique: true,
+      trim: true,
+      uppercase: true,
+      index: true,
+    },
+    // 2. Email - Now Optional
     email: {
       type: String,
-      required: [true, 'Email address is required'],
+      required: false,
       unique: true,
+      sparse: true,
       lowercase: true,
       trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],
+      match: [/^\S+@\S+\.\S+$/, "Please provide a valid email address"],
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
-      minlength: [6, 'Password must be at least 6 characters long'],
-      select: false, // Never return password hash in API responses
+      required: [true, "Password is required"],
+      minlength: [6, "Password must be at least 6 characters long"],
+      select: false,
     },
     role: {
       type: String,
       enum: {
-        values: ['admin', 'teacher', 'student', 'parent'],
-        message: 'Role must be one of: admin, teacher, student, parent',
+        values: ["admin", "teacher", "student", "parent"],
+        message: "Role must be one of: admin, teacher, student, parent",
       },
-      default: 'student',
+      default: "student",
       index: true,
     },
+    // 3. Phone - Now Required
     phone: {
       type: String,
+      required: [true, "Phone number is required"],
       trim: true,
-      default: '',
     },
     avatar: {
       type: String,
-      default: '',
+      default: "",
     },
     isActive: {
       type: Boolean,
       default: true,
     },
-    // Reference to the role-specific profile document (Student/Teacher/Parent)
     profileRef: {
       type: mongoose.Schema.Types.ObjectId,
-      refPath: 'profileModel',
+      refPath: "profileModel",
       default: null,
     },
     profileModel: {
       type: String,
-      enum: ['Student', 'Teacher', 'Parent'],
+      enum: ["Student", "Teacher", "Parent"],
       default: null,
     },
-    // Password Reset – stores a hashed token and its expiry. Actual reset flow
-    // will be implemented when email service is connected.
     passwordResetToken: {
       type: String,
       default: null,
@@ -87,7 +86,6 @@ const userSchema = new mongoose.Schema(
   {
     timestamps: true,
     toJSON: {
-      // Strip password, reset tokens, and internal fields from every JSON response
       transform: function (doc, ret) {
         delete ret.password;
         delete ret.passwordResetToken;
@@ -99,19 +97,20 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// ─── Pre-Save Hook: Hash password before storing ────────────────────────────
-// Only runs when the password field is new or modified.
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  this.password = await bcrypt.hash(this.password, 12); // 12 salt rounds
+// Hash Password Before Save
+userSchema.pre("save", async function (next) {
+  // Only hash password if it was modified (or is new)
+  if (!this.isModified("password") || !this.password) return next();
+  // Protect against double hashing if already a bcrypt hash
+  if (this.password.startsWith("$2a$") || this.password.startsWith("$2b$")) return next();
+  this.password = await bcrypt.hash(this.password, 12);
   next();
 });
 
-// ─── Instance Method: Compare entered password with stored hash ──────────────
-// Used in auth.service.js during login. Never compare passwords manually.
+// Compare Password
 userSchema.methods.comparePassword = async function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.password);
 };
 
-export const User = mongoose.model('User', userSchema);
+export const User = mongoose.model("User", userSchema);
 export default User;

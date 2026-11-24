@@ -137,7 +137,13 @@ export const TeacherRegisterPage = () => {
 
       setServerSuccess('Faculty account registered successfully! Redirecting to login...');
       setTimeout(() => {
-        navigate('/login');
+        navigate('/login', {
+          state: {
+            role: 'teacher',
+            identifier: formData.employeeId || formData.email,
+            message: `Faculty registration successful! Please sign in with your Employee ID: ${formData.employeeId}.`,
+          },
+        });
       }, 1500);
     } catch (err) {
       setServerError(

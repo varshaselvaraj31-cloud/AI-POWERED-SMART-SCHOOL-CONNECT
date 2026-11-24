@@ -53,7 +53,7 @@ const StudentAssignmentsPage = () => {
           ))}
         </Stack>
 
-        <AssignmentsCard limit={DEMO_ASSIGNMENTS.length} />
+        <AssignmentsCard limit={50} filterStatus={tab} />
       </Box>
     </DashboardLayout>
   );

@@ -20,10 +20,12 @@ import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
 import CalendarMonthOutlinedIcon from '@mui/icons-material/CalendarMonthOutlined';
 import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
 import CampaignOutlinedIcon from '@mui/icons-material/CampaignOutlined';
+import ChecklistOutlinedIcon from '@mui/icons-material/ChecklistOutlined';
 import AccountCircleOutlinedIcon from '@mui/icons-material/AccountCircleOutlined';
 import LogoutOutlinedIcon from '@mui/icons-material/LogoutOutlined';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import { DEMO_STUDENT } from '../../data/studentDemo.js';
+import { getEffectiveStudent, getUserInitials } from '../../utils/authStorage.js';
 
 export const SIDEBAR_WIDTH = 240;
 export const SIDEBAR_COLLAPSED_WIDTH = 72;
@@ -59,6 +61,11 @@ const NAV_ITEMS = [
     path: '/student/announcements',
     icon: <CampaignOutlinedIcon />,
   },
+  {
+    label: 'To-Do List',
+    path: '/student/todo',
+    icon: <ChecklistOutlinedIcon />,
+  },
 ];
 
 const BOTTOM_ITEMS = [
@@ -86,11 +93,8 @@ const StudentSidebar = ({ mobileOpen, onMobileClose, collapsed, onToggleCollapse
     navigate('/login');
   };
 
-  const initials = DEMO_STUDENT.name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase();
+  const student = getEffectiveStudent(DEMO_STUDENT);
+  const initials = getUserInitials(student.name);
 
   const sidebarContent = (
     <Box
@@ -187,10 +191,10 @@ const StudentSidebar = ({ mobileOpen, onMobileClose, collapsed, onToggleCollapse
                 textOverflow: 'ellipsis',
               }}
             >
-              {DEMO_STUDENT.name}
+              {student.name}
             </Typography>
             <Typography variant="caption" sx={{ color: '#d97706', fontSize: '0.72rem', fontWeight: 600 }}>
-              {DEMO_STUDENT.grade}
+              {student.grade}
             </Typography>
           </Box>
         </Box>
@@ -263,9 +267,10 @@ const StudentSidebar = ({ mobileOpen, onMobileClose, collapsed, onToggleCollapse
                   {!collapsed && (
                     <ListItemText
                       primary={item.label}
-                      primaryTypographyProps={{
-                        fontSize: '0.875rem',
-                        fontWeight: active ? 800 : 500,
+                      slotProps={{
+                        primary: {
+                          sx: { fontSize: '0.875rem', fontWeight: active ? 800 : 500 },
+                        },
                       }}
                     />
                   )}
@@ -322,7 +327,7 @@ const StudentSidebar = ({ mobileOpen, onMobileClose, collapsed, onToggleCollapse
                   {!collapsed && (
                     <ListItemText
                       primary={item.label}
-                      primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: active ? 800 : 500 }}
+                      slotProps={{ primary: { sx: { fontSize: '0.875rem', fontWeight: active ? 800 : 500 } } }}
                     />
                   )}
                 </ListItemButton>
@@ -357,7 +362,7 @@ const StudentSidebar = ({ mobileOpen, onMobileClose, collapsed, onToggleCollapse
               {!collapsed && (
                 <ListItemText
                   primary="Logout"
-                  primaryTypographyProps={{ fontSize: '0.875rem', fontWeight: 500 }}
+                  slotProps={{ primary: { sx: { fontSize: '0.875rem', fontWeight: 500 } } }}
                 />
               )}
             </ListItemButton>
