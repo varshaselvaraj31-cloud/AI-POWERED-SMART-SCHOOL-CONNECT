@@ -12,11 +12,18 @@ const app = express();
 // ==========================================
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (e.g. mobile apps, curl, Postman) or matching frontend
-    if (!origin || origin === env.CLIENT_URL || env.isDevelopment) {
+    // Allow requests with no origin (e.g. mobile apps, curl, Postman), local dev, or deployed frontends
+    if (
+      !origin ||
+      origin === env.CLIENT_URL ||
+      env.isDevelopment ||
+      origin.includes('github.io') ||
+      origin.includes('vercel.app') ||
+      origin.includes('onrender.com')
+    ) {
       callback(null, true);
     } else {
-      callback(new Error('Blocked by CORS policy'));
+      callback(null, true); // Permissive for production deployment
     }
   },
   credentials: true,
